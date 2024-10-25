@@ -1,0 +1,22 @@
+HALAMAN PERSETUJUAN SEMINAR PROPOSAL.docx
+production
+dev/translate/test.xlsx
+dev/translate/Resampled_Dataset.xlsx
+dev/translate/Balanced_Dataset.xlsx
+dev/paraphrase/tidak_didahulukan_resampled.xlsx
+dev/paraphrase/resampled_final_v1.0.xlsx
+dev/paraphrase/resampled_final_no_duplicates.xlsx
+dev/paraphrase/paling_didahulukan_resampled.xlsx
+dev/paraphrase/no_outlier.xlsx
+dev/paraphrase/didahulukan_resampled.xlsx
+dev/paraphrase/Balanced_Dataset.xlsx
+dev/paraphrase/Balanced_Dataset_v1.0.xlsx
+dev/paraphrase/Balanced_Dataset_BERT_friendly.xlsx
+dev/original data/tidak_didahulukan_ori.xlsx
+dev/original data/paling_didahulukan_ori.xlsx
+dev/original data/didahulukan_ori.xlsx
+dev/Temp Preprocessed Dataset.xlsx
+dev/Preprocessed Dataset.xlsx
+shuffled_data_translated.xlsx
+Note.txt
+dev/translate.py
