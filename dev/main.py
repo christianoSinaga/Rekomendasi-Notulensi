@@ -32,6 +32,8 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
 from scipy.stats import uniform
+from sklearn.svm import LinearSVC
+import numpy as np
 
 # nltk.download('wordnet')
 # nltk.download('stopwords')
@@ -45,6 +47,7 @@ from scipy.stats import uniform
 factory = StemmerFactory()
 stemmer = factory.create_stemmer()
 
+# %%
 # Fungsi untuk membersihkan dan memproses teks 
 def preprocess_text(text):
     # Lowercase folding
@@ -72,23 +75,54 @@ y2 = old_df['Prioritas']
 
 # %%
 randomSplit = random.randrange(1,50)
-test_split = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+test_split = [0.1, 0.2, 0.3, 0.4, 0.5]
 rand_test = random.choice(test_split)
 
 # %%
 ## Menyimpan Model Dengan Parameter Terbaik
 final_pipeline = Pipeline([
-    ('tfidf', TfidfVectorizer(max_df=0.75, ngram_range=(1, 1))),
+    ('tfidf', TfidfVectorizer(max_df=0.50, ngram_range=(1, 1))),
     ('clf', SVC(C=3.68, gamma='scale',  kernel='rbf', probability=True))
-
 ])
+
 # %%
 ## SVM Dengan Data Bersih
 for num in test_split:
     X_train, X_test, y_train, y_test = train_test_split(df_parafrase['clean_notulensi'], df_parafrase['Prioritas'], test_size=num, random_state=42)
     model = final_pipeline.fit(X_train, y_train)
     y_pred = model.predict(X_test)
-    print(f"CLEAN Set Accuracy {num}: {accuracy_score(y_test, y_pred)}")
+    print(f"Model Accuracy {num}: {accuracy_score(y_test, y_pred)}")
+
+# %%
+## Ekstrak Fitur
+## Ubah pipeline dengan LinearSVC untuk mendapatkan bobot fitur
+linear_pipeline = Pipeline([
+    ('tfidf', TfidfVectorizer(max_df=0.70, ngram_range=(1, 1))),
+    ('clf', LinearSVC(C=3.68))
+])
+
+# Fit Linear SVM pada data yang sama
+linear_pipeline.fit(df_parafrase['clean_notulensi'], df_parafrase['Prioritas'])
+
+# Mendapatkan fitur dari TF-IDF dan koefisien dari LinearSVC
+feature_names = linear_pipeline.named_steps['tfidf'].get_feature_names_out()
+coef = linear_pipeline.named_steps['clf'].coef_
+
+# Menyusun bobot fitur dalam DataFrame untuk interpretasi
+# Setiap kolom mewakili prioritas yang diprediksi oleh model
+coef_df = pd.DataFrame(coef, columns=feature_names, index=["Prioritas 1", "Prioritas 2", "Prioritas 3"])
+
+# Mendapatkan kata-kata dengan bobot tertinggi untuk setiap prioritas
+top_features = {}
+for label in coef_df.index:
+    top_features[label] = coef_df.loc[label].nlargest(25)
+
+# Tampilkan hasil
+for label, features in top_features.items():
+    print(f"Top words for {label}:")
+    print(features)
+    print("\n")
+
 # %%
 ## MNB Dengan Data Bersih
 mnb_pipeline = Pipeline([
@@ -105,7 +139,7 @@ for num in test_split:
 best_params = {'clf__C': 3.68, 'clf__gamma': 'scale', 'clf__kernel': 'rbf', 'tfidf__max_df': 0.75, 'tfidf__ngram_range': (1, 1)}
 final_pipeline = Pipeline([
     ('tfidf', TfidfVectorizer(max_df=0.75, ngram_range=(1, 1))),
-    ('clf', SVC(C=3.68, gamma='scale',  kernel='rbf'))
+    ('clf', SVC(C=3.68, gamma='scale',  kernel='rbf', probability=True))
 
 ])
 
@@ -114,66 +148,49 @@ data_uji = pd.read_excel('../dataset.xlsx', sheet_name='uji')
 data_uji = data_uji[['data_baru', 'prioritas']]
 data_uji['data_baru_bersih'] = data_uji['data_baru'].apply(preprocess_text)
 
+# Prediksi probabilitas untuk setiap kelas
+probabilities = model.predict_proba(data_uji['data_baru_bersih'])
 
+# Tambahkan hasil prediksi dan probabilitas ke DataFrame
 data_uji['pred'] = model.predict(data_uji['data_baru_bersih'])
+# Tampilkan hasil
+print(f"{data_uji[['data_baru', 'prioritas', 'pred']]}\n{probabilities}")
 
-
-print(accuracy_score(data_uji['prioritas'], data_uji['pred']))
-data_uji
-
-# %% 
-# MENYIMPAN DATA BERSIH
-# df_parafrase.to_excel('paraphrase/no_outlier.xlsx')
-# %% 
-# Ensemble Test
-X_train_tfidf = final_pipeline.named_steps['tfidf'].fit_transform(df_parafrase['clean_notulensi'])
-X_test_tfidf = final_pipeline.named_steps['tfidf'].transform(data_uji['data_baru_bersih'])
-y_train = df_parafrase['Prioritas']
-y_test = data_uji['prioritas']
-# %%
-## Bagging
-from sklearn.ensemble import BaggingClassifier
-
-svm_bagging = BaggingClassifier(final_pipeline.named_steps['clf'], n_estimators=10, random_state=42)
-
-
-svm_bagging.fit(X_train_tfidf, y_train)
-
-y_pred = svm_bagging.predict(X_test_tfidf)
-print(accuracy_score(y_test, y_pred))
-
-# %%
-## Bosting
-from sklearn.ensemble import AdaBoostClassifier
-adaboost_svm = AdaBoostClassifier(final_pipeline.named_steps['clf'], n_estimators=50, random_state=42)
-
-adaboost_svm.fit(X_train_tfidf, y_train)
-y_pred = adaboost_svm.predict(X_test_tfidf)
-print(f"Akurasi AdaBoost SVM: {accuracy_score(y_test, y_pred)}")
-
-# %%
-## Stacking
-from sklearn.ensemble import StackingClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.linear_model import LogisticRegression
-
-# Base learners
-estimators = [
-    ('svm', final_pipeline.named_steps['clf']),
-    ('nb', mnb_pipeline.named_steps['clf']),
-    ('tree', DecisionTreeClassifier())
-]
-
-
-stacking_clf = StackingClassifier(estimators=estimators, final_estimator=LogisticRegression())
-
-stacking_clf.fit(X_train_tfidf, y_train)
-
-y_pred = stacking_clf.predict(X_test_tfidf)
-print(f"Akurasi Stacking: {accuracy_score(y_test, y_pred)}")
-
+print("Accuracy:", accuracy_score(data_uji['prioritas'], data_uji['pred']))
 # %%
 scores = cross_val_score(model, df_parafrase['clean_notulensi'], df_parafrase['Prioritas'], cv=10)  # cv=5 untuk 5-fold cross-validation
 print(f"Cross-validation scores: {scores}")
 print(f"Mean accuracy: {scores.mean()}")  # Rata-rata akurasi dari setiap fold
+# %%
+## MENYIMPAN MODEL KE PICKLE
+import pickle
+# %%
+# Simpan model ke file pickle
+with open('web/model/model.pkl', 'wb') as file:
+    pickle.dump(model, file)
+
+# Simpan preprocess ke pickle
+with open('web/model/preprocess.pkl', 'wb') as file:
+    pickle.dump(preprocess_text, file)
+
+
+# %%
+try:
+    with open('web/model/model.pkl', 'rb') as file:
+        model_pkl = pickle.load(file)
+
+    with open('web/model/preprocess.pkl', 'rb') as file:
+        preprocess_pkl = pickle.load(file)
+
+except EOFError:
+    print("Error: File pickle rusak atau tidak lengkap.")
+
+
+# %%
+data_uji = pd.read_excel('../dataset.xlsx', sheet_name='uji')
+data_uji = data_uji[['data_baru', 'prioritas']]
+data_uji['data_baru_bersih']=data_uji['data_baru'].apply(preprocess_pkl)
+data_uji['pred'] = model_pkl.predict(data_uji['data_baru_bersih'])
+# %%
+print(f"{data_uji[['data_baru', 'prioritas', 'pred']]}\n")
 # %%
