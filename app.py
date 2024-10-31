@@ -17,10 +17,10 @@ from IPython.display import Markdown
 import textwrap
 import time
 
-# nltk.download('wordnet')
-# nltk.download('stopwords')
-# nltk.download('punkt_tab')
-# nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download('stopwords')
+nltk.download('punkt_tab')
+nltk.download('punkt')
 
 factory = StemmerFactory()
 stemmer = factory.create_stemmer()
