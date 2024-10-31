@@ -89,17 +89,21 @@ def translate_label(pred):
     
 # Input Text streamlit yang dapat bertambah apabila sebuah button ditekan
 notulensi_group = []
+
 if 'count' not in st.session_state:
-    st.session_state.count = 0
+    st.session_state.count = 1
 
 if st.button("Tambahkan notulensi"):
     st.session_state.count += 1
 
 for i in range(st.session_state.count):
-    notulensi = st.text_input(f"Masukkan notulensi {i+1}", key=f"notulensi_{i}")
+    notulensi = st.text_input(f"Masukkan notulensi ke-{i+1}", key=f"notulensi_{i}")
     notulensi_group.append(notulensi)
 
-if st.button("Input"):
+
+col_1, col_2 = st.columns(2)
+
+if col_1.button("Tentukan Prioritas", use_container_width=True):
     if notulensi_group:
         # Preprocess text
         clean_notulensi_group = [preprocess_text(text) for text in notulensi_group]
@@ -107,10 +111,11 @@ if st.button("Input"):
         # Output notulensi dan prediksinnya masing masing dalam bentuk tabel
         st.write(pd.DataFrame({'Notulensi': notulensi_group, 'Prediksi': (translate_label(prediction) for prediction in prediction)}))
 
-if st.button("Clear"):
+if col_2.button("Reset", use_container_width=True):
     st.session_state.count = 0
     notulensi_group.clear()
     st.toast("Notulensi telah dihapus")
+    st.rerun()
 
     
 
