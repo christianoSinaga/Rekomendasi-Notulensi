@@ -8,6 +8,12 @@ import requests
 import string
 import nltk
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
+
+nltk.download('wordnet')
+nltk.download('stopwords')
+nltk.download('punkt_tab')
+nltk.download('punkt')
+
 factory = StemmerFactory()
 stemmer = factory.create_stemmer()
 # Function
