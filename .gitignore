@@ -20,3 +20,4 @@ dev/Preprocessed Dataset.xlsx
 shuffled_data_translated.xlsx
 Note.txt
 dev/translate.py
+.venv
