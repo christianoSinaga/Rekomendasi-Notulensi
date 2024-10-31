@@ -9,6 +9,14 @@ import string
 import nltk
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 
+## ChatBot REQ (OPTIONAL)
+import google.generativeai as genai
+
+from IPython.display import display
+from IPython.display import Markdown
+import textwrap
+import time
+
 # nltk.download('wordnet')
 # nltk.download('stopwords')
 # nltk.download('punkt_tab')
@@ -100,7 +108,7 @@ for i in range(st.session_state.count):
     notulensi = st.text_input(f"Masukkan notulensi ke-{i+1}", key=f"notulensi_{i}")
     notulensi_group.append(notulensi)
 
-
+output_model = pd.DataFrame()
 col_1, col_2 = st.columns(2)
 
 if col_1.button("Tentukan Prioritas", use_container_width=True):
@@ -109,7 +117,8 @@ if col_1.button("Tentukan Prioritas", use_container_width=True):
         clean_notulensi_group = [preprocess_text(text) for text in notulensi_group]
         prediction = model.predict(clean_notulensi_group)
         # Output notulensi dan prediksinnya masing masing dalam bentuk tabel
-        st.write(pd.DataFrame({'Notulensi': notulensi_group, 'Prediksi': (translate_label(prediction) for prediction in prediction)}))
+        output_model = pd.DataFrame({'Notulensi': notulensi_group, 'Prediksi': (translate_label(prediction) for prediction in prediction)})
+        st.write(output_model)
 
 if col_2.button("Reset", use_container_width=True):
     st.session_state.count = 0
@@ -117,7 +126,113 @@ if col_2.button("Reset", use_container_width=True):
     st.toast("Notulensi telah dihapus")
     st.rerun()
 
-    
+# Fungsi stream untuk variabel berisi tipe data String
+def stream_error_msg(response):
+    for word in response.split(" "):
+        yield word + " "
+        time.sleep(0.02)
+st.divider()
+initial_msg = "Selamat datang di fitur chatbot. Saat ini, fitur ini masih dalam tahap pengembangan awal dan belum menjadi prioritas utama karena keterbatasan anggaran, sehingga pengembang menggunakan API Key versi gratis. Pengembang juga ingin menginformasikan bahwa situs ini disediakan untuk mendukung penilaian tugas akhir atau skripsi dari pengembang. Mohon maaf atas segala keterbatasan dan kekurangan yang mungkin Anda temui dalam penggunaan fitur chatbot ini. sangat menghargai pengertian Anda."
+
+stream_initial_msg = st.write_stream(stream_error_msg(initial_msg))
+
+## CHATBOT (OPTIONAL)
+def to_markdown(text):
+  text = text.replace('•', '  *')
+  return Markdown(textwrap.indent(text, '> ', predicate=lambda _: True))
+
+
+# Set API Key and Model
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+if "genai_model" not in st.session_state:
+    st.session_state["genai_model"] = genai.GenerativeModel('gemini-1.5-flash')
+model = st.session_state["genai_model"]
+
+
+if "chats" not in st.session_state:
+    st.session_state.chats = []
+
+# Tampilkan pesan sebelumnya
+for chat in st.session_state.chats:
+    with st.chat_message(chat["role"]):
+        st.markdown(chat["text"])
+
+# Fungsi untuk mengonversi sesi obrolan ke format chat.history
+def convert_to_chat_history_format(chats):
+    history = []
+    for chat in chats:
+        history.append({
+            "parts": [{"text": chat["text"]}],
+            "role": chat["role"]
+        })
+    return history
+
+
+# Fungsi streaming yang dimodifikasi untuk digunakan dengan `st.write_stream`
+def stream_gem_ai(response):
+    for chunk in response:
+        yield chunk.text  # Menggunakan `yield` untuk membuatnya menjadi generator
+
+
+
+chat_history = convert_to_chat_history_format(st.session_state.chats)
+chat_ai = model.start_chat(history=chat_history) 
+
+
+if(not output_model.empty):
+    intial_prompt = f"Kamu adalah seorang asisten dari mahasiswa yang aku tugaskan untuk membantu mahasiswa tingkat akhir dalam menentukan urutan pengerjaan dari notulensi bimbingannya. Sebelumnya kamu sudah memberikan label tingkat prioritas dari masing masing notulensi sebagai berikut : \n{output_model}\nDengan 'Paling Didahulukan' adalah prioritas tertinggi, 'Didahulukan' adalah prioritas kedua, dan 'Tidak Perlu Didahulukan' adalah prioritas terakhir.\nKamu juga menggunakan parameter berikut untuk menentukan tingkat prioritasnya:\n{table}\nSelanjutnya kamu akan berkomunikasi dengan mahasiwa yang memberikan notulensi sebagai pengguna. Tanyakan pengguna apakah memiliki kebingungan dari tingkat prioritas yang kamu berikan pada masing masing notulensi! Dan jelaskan kepada mereka apabila terdapat kebingungan! Gunakan bahasa sesingkat singkatnya dan simple!"
+    with st.chat_message("assistant"):
+        try:
+            response_ai = chat_ai.send_message(intial_prompt, stream=True)  # Pastikan `send_message` mendukung streaming
+            # Menggunakan generator dengan `st.write_stream`
+            response = st.write_stream(stream_gem_ai(response_ai))
+            st.session_state.chats.append({
+                "role": "model",
+                "text": response
+            })
+        except Exception as e:
+            error_msg =  f"Terjadi kesalahan: {str(e)}"
+            response = st.write_stream(stream_error_msg(error_msg))
+            st.session_state.chats.append({
+                "role": "assistant",
+                "text": response
+            })
+
+# Menerima input pengguna
+if prompt := st.chat_input("Chat with Gemini AI"):
+    st.session_state.chats.append({
+        "role": "user",
+        "text": prompt
+    })
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # Siapkan histori dalam format yang diinginkan
+
+    with st.chat_message("assistant"):
+        try: 
+            response_ai = chat_ai.send_message(prompt, stream=True)  # Pastikan `send_message` mendukung streaming
+            # Menggunakan generator dengan `st.write_stream`
+            response = st.write_stream(stream_gem_ai(response_ai))
+            st.session_state.chats.append({
+                "role": "model",
+                "text": response
+            })
+        except Exception as e:
+            error_msg =  f"Terjadi kesalahan: {str(e)}"
+            response = st.write_stream(stream_error_msg(error_msg))
+            st.session_state.chats.append({
+                "role": "assistant",
+                "text": response
+            })
+        
+
+
+
+
+
+
+
 
 # SIDEBAR
 link = "https://docs.google.com/forms/d/e/1FAIpQLSdm34qJkPTooN1Df0j45tMRxoIf8MLlUGfnM3bf1_8uI2gGoA/formResponse"

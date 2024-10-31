@@ -22,3 +22,4 @@ Note.txt
 dev/translate.py
 .venv
 dev
+dev/paraphrase.py
