@@ -313,7 +313,7 @@ with st.sidebar.form("gform_input", enter_to_submit=False):
     # Nama Mahasiswa
     student_name = st.text_input("Nama Kamu")
     # Jurusan Mahasiswa
-    student_major = st.text_input("Jurusan Kamu")
+    student_major = st.text_input("Asal Universitas")
 
     # Define questions
     questions = [
