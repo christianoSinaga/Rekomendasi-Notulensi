@@ -110,6 +110,8 @@ for i in range(st.session_state.count):
 
 output_model = pd.DataFrame()
 col_1, col_2 = st.columns(2)
+if 'output_model' not in st.session_state:
+    st.session_state.output_model = pd.DataFrame({'Notulensi': []})
 
 if col_1.button("Tentukan Prioritas", use_container_width=True):
     if notulensi_group:
@@ -117,8 +119,10 @@ if col_1.button("Tentukan Prioritas", use_container_width=True):
         clean_notulensi_group = [preprocess_text(text) for text in notulensi_group]
         prediction = model.predict(clean_notulensi_group)
         # Output notulensi dan prediksinnya masing masing dalam bentuk tabel
-        output_model = pd.DataFrame({'Notulensi': notulensi_group, 'Prediksi': (translate_label(prediction) for prediction in prediction)})
-        st.write(output_model)
+        st.session_state.output_model = pd.DataFrame({'Notulensi': notulensi_group, 'Prediksi': (translate_label(prediction) for prediction in prediction)})
+
+if not st.session_state.output_model['Notulensi'].empty:
+    st.dataframe(st.session_state.output_model, use_container_width=True, hide_index=True)
 
 if col_2.button("Reset", use_container_width=True):
     st.session_state.count = 0
@@ -131,10 +135,38 @@ def stream_error_msg(response):
     for word in response.split(" "):
         yield word + " "
         time.sleep(0.02)
-st.divider()
-initial_msg = "Selamat datang di fitur chatbot. Saat ini, fitur ini masih dalam tahap pengembangan awal dan belum menjadi prioritas utama karena keterbatasan anggaran, sehingga pengembang menggunakan API Key versi gratis. Pengembang juga ingin menginformasikan bahwa situs ini disediakan untuk mendukung penilaian tugas akhir atau skripsi dari pengembang. Mohon maaf atas segala keterbatasan dan kekurangan yang mungkin Anda temui dalam penggunaan fitur chatbot ini. sangat menghargai pengertian Anda."
 
-stream_initial_msg = st.write_stream(stream_error_msg(initial_msg))
+def output_propmt(output_model):
+    final_output = ""
+    for i, row in output_model.iterrows():
+        final_output += f"- **Notulensi ke {i+1}**: '{row['Notulensi']}' | **Prioritas**: {row['Prediksi']}\n"
+    return final_output
+
+st.divider()
+# st.write(output_propmt(output_model))
+initial_msg = "Di bawah ini adalah fitur chatbot. Saat ini, fitur ini masih dalam tahap pengembangan awal dan belum menjadi prioritas utama karena keterbatasan anggaran, sehingga pengembang menggunakan API Key versi gratis. Pengembang juga ingin menginformasikan bahwa situs ini disediakan untuk mendukung penilaian tugas akhir atau skripsi dari pengembang. Mohon maaf atas segala keterbatasan dan kekurangan yang mungkin Anda temui dalam penggunaan fitur chatbot ini. sangat menghargai pengertian Anda."
+
+if (not st.session_state.output_model['Notulensi'].empty):
+    initial_prompt = f"""
+    Kamu adalah seorang asisten dari mahasiswa yang aku tugaskan untuk membantu mahasiswa tingkat akhir dalam menentukan urutan pengerjaan dari notulensi bimbingannya. Sebelumnya kamu sudah memberikan label tingkat prioritas dari masing masing notulensi sebagai berikut : 
+    
+    {output_propmt(st.session_state.output_model)}
+
+    Kamu memberikan label tingkat prioritas dengan menggunakan parameter berikut:
+    | **Label**               | **Tingkat Kesulitan**           | **Pengaruh** |
+    |-------------------------|----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | **Paling Didahulukan**  | Tinggi - Sedang                 | Memiliki potensi mengubah alur penelitian baik sebagian atau seluruhnya. Dapat memerlukan perubahan besar seperti penyesuaian topik/judul, perubahan rumusan masalah, atau pergantian metode penelitian. |
+    | **Didahulukan**         | Sedang                          | Berpotensi mengubah bagian tertentu, meskipun tidak terlalu memengaruhi keseluruhan alur penelitian. Bisa melibatkan kesesuaian data, penjabaran penelitian, atau perubahan pada satu bab agar sesuai dengan penelitian.  |
+    | **Tidak Perlu Didahulukan** | Sedang - Rendah            | Tidak memengaruhi alur penelitian; hanya perubahan kecil seperti kejelasan penulisan, kesesuaian pedoman, atau penambahan elemen kecil untuk memperjelas penelitian. |
+    
+    Selanjutnya kamu akan berkomunikasi dengan mahasiwa yang memberikan notulensi yang sudah kamu berikan label tingkat prioritas di atas. Tanyakan pengguna apakah memiliki kebingungan dari tingkat prioritas yang kamu berikan pada masing masing notulensi! Dan jelaskan kepada mereka apabila terdapat kebingungan! Gunakan bahasa sesingkat singkatnya dan simple! Kamu juga harus terus mengingat notulensi dan tingkat prioritas yang sudah kamu berikan di atas!
+    """
+    # initial_prompt = f" {output_propmt(st.session_state.output_model)}"
+
+
+
+stream_initial_msg = st.write(initial_msg)
+
 
 ## CHATBOT (OPTIONAL)
 def to_markdown(text):
@@ -152,14 +184,22 @@ model = st.session_state["genai_model"]
 if "chats" not in st.session_state:
     st.session_state.chats = []
 
+
+if "done_initial" not in st.session_state:
+    st.session_state.done_initial = False
+
 # Tampilkan pesan sebelumnya
 for chat in st.session_state.chats:
+    # mengabaikan initial prompt
     with st.chat_message(chat["role"]):
         st.markdown(chat["text"])
 
 # Fungsi untuk mengonversi sesi obrolan ke format chat.history
-def convert_to_chat_history_format(chats):
+# Parameter initial_prompt nullable
+def convert_to_chat_history_format(chats, initial_prompt=None):
     history = []
+    if initial_prompt:
+        history.append({"parts": [{"text": initial_prompt}], "role": "user"})
     for chat in chats:
         history.append({
             "parts": [{"text": chat["text"]}],
@@ -173,28 +213,25 @@ def stream_gem_ai(response):
     for chunk in response:
         yield chunk.text  # Menggunakan `yield` untuk membuatnya menjadi generator
 
-
-
-chat_history = convert_to_chat_history_format(st.session_state.chats)
-chat_ai = model.start_chat(history=chat_history) 
-
-
-if(not output_model.empty):
-    intial_prompt = f"Kamu adalah seorang asisten dari mahasiswa yang aku tugaskan untuk membantu mahasiswa tingkat akhir dalam menentukan urutan pengerjaan dari notulensi bimbingannya. Sebelumnya kamu sudah memberikan label tingkat prioritas dari masing masing notulensi sebagai berikut : \n{output_model}\nDengan 'Paling Didahulukan' adalah prioritas tertinggi, 'Didahulukan' adalah prioritas kedua, dan 'Tidak Perlu Didahulukan' adalah prioritas terakhir.\nKamu juga menggunakan parameter berikut untuk menentukan tingkat prioritasnya:\n{table}\nSelanjutnya kamu akan berkomunikasi dengan mahasiwa yang memberikan notulensi sebagai pengguna. Tanyakan pengguna apakah memiliki kebingungan dari tingkat prioritas yang kamu berikan pada masing masing notulensi! Dan jelaskan kepada mereka apabila terdapat kebingungan! Gunakan bahasa sesingkat singkatnya dan simple!"
-    with st.chat_message("assistant"):
+if not st.session_state.output_model['Notulensi'].empty or st.session_state.done_initial:
+    chat_history = convert_to_chat_history_format(st.session_state.chats, initial_prompt)
+    chat_ai = model.start_chat(history=chat_history) 
+    # st.session_state.done_initial = True
+if not st.session_state.output_model['Notulensi'].empty and not st.session_state.done_initial:
+    with st.chat_message("model"):
         try:
-            response_ai = chat_ai.send_message(intial_prompt, stream=True)  # Pastikan `send_message` mendukung streaming
-            # Menggunakan generator dengan `st.write_stream`
+            response_ai = chat_ai.send_message(initial_prompt, stream=True)  # Pastikan `send_message` mendukung streaming
             response = st.write_stream(stream_gem_ai(response_ai))
             st.session_state.chats.append({
                 "role": "model",
                 "text": response
             })
+            st.session_state.done_initial = True
         except Exception as e:
             error_msg =  f"Terjadi kesalahan: {str(e)}"
             response = st.write_stream(stream_error_msg(error_msg))
             st.session_state.chats.append({
-                "role": "assistant",
+                "role": "model",
                 "text": response
             })
 
@@ -209,7 +246,7 @@ if prompt := st.chat_input("Chat with Gemini AI"):
 
     # Siapkan histori dalam format yang diinginkan
 
-    with st.chat_message("assistant"):
+    with st.chat_message("model"):
         try: 
             response_ai = chat_ai.send_message(prompt, stream=True)  # Pastikan `send_message` mendukung streaming
             # Menggunakan generator dengan `st.write_stream`
@@ -222,7 +259,7 @@ if prompt := st.chat_input("Chat with Gemini AI"):
             error_msg =  f"Terjadi kesalahan: {str(e)}"
             response = st.write_stream(stream_error_msg(error_msg))
             st.session_state.chats.append({
-                "role": "assistant",
+                "role": "model",
                 "text": response
             })
         
