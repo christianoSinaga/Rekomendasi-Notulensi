@@ -235,34 +235,35 @@ if not st.session_state.output_model['Notulensi'].empty and not st.session_state
                 "text": response
             })
 
-# Menerima input pengguna
-if prompt := st.chat_input("Chat with Gemini AI"):
-    st.session_state.chats.append({
-        "role": "user",
-        "text": prompt
-    })
-    with st.chat_message("user"):
-        st.markdown(prompt)
+if st.session_state.done_initial:
+    # Menerima input pengguna
+    if prompt := st.chat_input("Chat with Gemini AI"):
+        st.session_state.chats.append({
+            "role": "user",
+            "text": prompt
+        })
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-    # Siapkan histori dalam format yang diinginkan
+        # Siapkan histori dalam format yang diinginkan
 
-    with st.chat_message("model"):
-        try: 
-            response_ai = chat_ai.send_message(prompt, stream=True)  # Pastikan `send_message` mendukung streaming
-            # Menggunakan generator dengan `st.write_stream`
-            response = st.write_stream(stream_gem_ai(response_ai))
-            st.session_state.chats.append({
-                "role": "model",
-                "text": response
-            })
-        except Exception as e:
-            error_msg =  f"Terjadi kesalahan: {str(e)}"
-            response = st.write_stream(stream_error_msg(error_msg))
-            st.session_state.chats.append({
-                "role": "model",
-                "text": response
-            })
-        
+        with st.chat_message("model"):
+            try: 
+                response_ai = chat_ai.send_message(prompt, stream=True)  # Pastikan `send_message` mendukung streaming
+                # Menggunakan generator dengan `st.write_stream`
+                response = st.write_stream(stream_gem_ai(response_ai))
+                st.session_state.chats.append({
+                    "role": "model",
+                    "text": response
+                })
+            except Exception as e:
+                error_msg =  f"Terjadi kesalahan: {str(e)}"
+                response = st.write_stream(stream_error_msg(error_msg))
+                st.session_state.chats.append({
+                    "role": "model",
+                    "text": response
+                })
+            
 
 
 
