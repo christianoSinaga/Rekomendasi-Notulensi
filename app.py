@@ -40,6 +40,16 @@ def preprocess_text(text):
 
 # BODY
 title = st.title("Rekomendasi Urutan Prioritas")
+desc = '''
+Merupakan aplikasi yang dapat membantu anda untuk menentukan urutan penyelesaian dari notulensi bimbingan yang sudah kamu lakukan.
+## Cara Menggunakan Sistem Rekomendasi:
+* **Mengisi Notulensi**: Dari bimbingan yang baru saja dilakukan, mahasiswa dapat mengisi notulensinya ke dalam input `notulensi` di bawah ini.
+* **Bentuk Notulensi**: Dalam satu input `notulensi`, mahasiswa hanya dapat mengisi satu notulensi
+* **Menambah Notulensi**: Jika anda ingin menambahkan notulensi, silahkan memilih tombol `Tambah Notulensi` untuk menambahkan notulensi
+* **Memberikan Rekomendasi**: Pilih tombol `Tentukan Prioritas` untuk memberikan notulensi kepada model agar dapat memberikan rekomendasi urutan prioritas
+
+> Setelah anda mencoba menggunakan  sistem rekomendasi ini, silahkan memberikan umpan balik kepada peneliti yang terdapat pada sidebar. Apabila anda menggunakan ponsel, anda bisa memilih tombol yang ada di pojok kiri atas untuk membuka sidebar. Umpan balik sangat diperlukan oleh peneliti untuk kelanjutan penelitiannya.
+'''
 table = '''
 <table style="border:1px solid white; border-radius: 10px;">
     <thead>
@@ -80,7 +90,8 @@ table = '''
 </table>
 
 '''
-st.html(table)
+# st.html(table)
+st.markdown(desc, unsafe_allow_html=True)
 
 ## SVM MODEL
 # Load Model Dari Pickle
@@ -110,8 +121,15 @@ for i in range(st.session_state.count):
 
 output_model = pd.DataFrame()
 col_1, col_2 = st.columns(2)
+# Inisialisasi Variabel Dalam Session State
 if 'output_model' not in st.session_state:
     st.session_state.output_model = pd.DataFrame({'Notulensi': []})
+
+if "chats" not in st.session_state:
+    st.session_state.chats = []
+
+if "done_initial" not in st.session_state:
+    st.session_state.done_initial = False
 
 if col_1.button("Tentukan Prioritas", use_container_width=True):
     if notulensi_group:
@@ -120,6 +138,7 @@ if col_1.button("Tentukan Prioritas", use_container_width=True):
         prediction = model.predict(clean_notulensi_group)
         # Output notulensi dan prediksinnya masing masing dalam bentuk tabel
         st.session_state.output_model = pd.DataFrame({'Notulensi': notulensi_group, 'Prediksi': (translate_label(prediction) for prediction in prediction)})
+        st.session_state.done_initial = False
 
 if not st.session_state.output_model['Notulensi'].empty:
     st.dataframe(st.session_state.output_model, use_container_width=True, hide_index=True)
@@ -159,7 +178,7 @@ if (not st.session_state.output_model['Notulensi'].empty):
     | **Didahulukan**         | Sedang                          | Berpotensi mengubah bagian tertentu, meskipun tidak terlalu memengaruhi keseluruhan alur penelitian. Bisa melibatkan kesesuaian data, penjabaran penelitian, atau perubahan pada satu bab agar sesuai dengan penelitian.  |
     | **Tidak Perlu Didahulukan** | Sedang - Rendah            | Tidak memengaruhi alur penelitian; hanya perubahan kecil seperti kejelasan penulisan, kesesuaian pedoman, atau penambahan elemen kecil untuk memperjelas penelitian. |
     
-    Selanjutnya kamu akan berkomunikasi dengan mahasiwa yang memberikan notulensi yang sudah kamu berikan label tingkat prioritas di atas. Tanyakan pengguna apakah memiliki kebingungan dari tingkat prioritas yang kamu berikan pada masing masing notulensi! Dan jelaskan kepada mereka apabila terdapat kebingungan! Gunakan bahasa sesingkat singkatnya dan simple! Kamu juga harus terus mengingat notulensi dan tingkat prioritas yang sudah kamu berikan di atas!
+    Selanjutnya kamu akan berkomunikasi dengan mahasiwa yang memberikan notulensi yang sudah kamu berikan label tingkat prioritas di atas. Berikan alasan dan penjelasan kamu lebih lanjut kepada mahasiswa pengguna atas penentuan prioritas yang sudah kamu berikan. Gunakan bahasa yang santai dan mudah dipahami oleh mahasiswa. Kamu juga dapat memberikan saran dan rekomendasi kepada mahasiswa pengguna untuk mempercepat penyelesaian tugas akhirnya. 
     """
     # initial_prompt = f" {output_propmt(st.session_state.output_model)}"
 
@@ -181,12 +200,7 @@ if "genai_model" not in st.session_state:
 model = st.session_state["genai_model"]
 
 
-if "chats" not in st.session_state:
-    st.session_state.chats = []
 
-
-if "done_initial" not in st.session_state:
-    st.session_state.done_initial = False
 
 # Tampilkan pesan sebelumnya
 for chat in st.session_state.chats:
