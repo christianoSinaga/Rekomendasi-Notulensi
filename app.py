@@ -149,6 +149,9 @@ if col_2.button("Reset", use_container_width=True):
     st.toast("Notulensi telah dihapus")
     st.rerun()
 
+
+
+## CHATBOT
 # Fungsi stream untuk variabel berisi tipe data String
 def stream_error_msg(response):
     for word in response.split(" "):

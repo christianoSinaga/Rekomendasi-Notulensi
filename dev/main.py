@@ -34,6 +34,7 @@ from sklearn.pipeline import Pipeline
 from scipy.stats import uniform
 from sklearn.svm import LinearSVC
 import numpy as np
+from normalization_dict import normalization_dict
 
 # nltk.download('wordnet')
 # nltk.download('stopwords')
@@ -47,6 +48,8 @@ import numpy as np
 factory = StemmerFactory()
 stemmer = factory.create_stemmer()
 
+def normalize_text(tokens):
+    return [normalization_dict.get(word, word) for word in tokens]
 # %%
 # Fungsi untuk membersihkan dan memproses teks 
 def preprocess_text(text):
@@ -56,6 +59,8 @@ def preprocess_text(text):
     text = text.translate(str.maketrans('', '', string.punctuation))
     # Tokenisasi
     tokens = nltk.word_tokenize(text)
+    # Normalisasi
+    tokens = normalize_text(tokens)
     # Stopwords removal dan stemming
     tokens = [stemmer.stem(word) for word in tokens]
     # Gabungkan kembali token menjadi teks

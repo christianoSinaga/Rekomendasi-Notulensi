@@ -142,6 +142,7 @@ parafrase_data['Prioritas'].value_counts()
 df = pd.read_excel('paraphrase/resampled_final_no_duplicates.xlsx')
 df['Prioritas'].value_counts()
 
+# %%
 df_3 = df[df['Prioritas'] == 3] # Sudah 509 data
 df_2 = df[df['Prioritas'] == 2].sample(n = 537,  random_state= 42)
 df_1 = df[df['Prioritas'] == 1].sample(n = 537, random_state= 42) 

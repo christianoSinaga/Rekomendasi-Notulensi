@@ -22,10 +22,13 @@ from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
 from scipy.stats import uniform
 import numpy as np
+from normalization_dict import normalization_dict
 # %%
 factory = StemmerFactory()
 stemmer = factory.create_stemmer()
 # %%
+def normalize_text(tokens):
+    return [normalization_dict.get(word, word) for word in tokens]
 def preprocess_text(text):
     # Lowercase folding
     text = text.lower()
@@ -33,6 +36,8 @@ def preprocess_text(text):
     text = text.translate(str.maketrans('', '', string.punctuation))
     # Tokenisasi
     tokens = nltk.word_tokenize(text)
+    # Normalisasi
+    tokens = normalize_text(tokens)
     # Stopwords removal dan stemming
     # tokens = [lemmatizer.lemmatize(word) for word in tokens if word not in custom_stopwords]
     tokens = [stemmer.stem(word) for word in tokens]
@@ -41,6 +46,18 @@ def preprocess_text(text):
 # %%
 df['clean_notulensi'] = df['Notulen'].apply(preprocess_text)
 test_split = [0.1, 0.2, 0.3, 0.4, 0.5]
+# %%
+final_pipeline = Pipeline([
+        ('tfidf', TfidfVectorizer(max_df=0.75, ngram_range=(1, 1))),
+        ('clf', SVC(C=3.68, gamma='scale', kernel='rbf', probability=True))
+
+    ])
+
+for num in test_split:
+        X_train, X_test, y_train, y_test = train_test_split(df['clean_notulensi'], df['Prioritas'], test_size=num, random_state=42)
+        model = final_pipeline.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        print(f"Accuracy Score With Test Size {num}: {accuracy_score(y_test, y_pred)}, \n{classification_report(y_test, y_pred)}")
 # %%
 ## Mencari SVM Parameter Finder
 # Pipeline untuk SVM
@@ -100,7 +117,8 @@ for threshold in thresholds:
     df['outlier'] = np.where(df['probabilities'] < threshold, 1, 0)  # 1 = outlier, 0 = bukan outlier
     # Menampilkan outlier
     outliers = df[df['outlier'] == 1]
-    print(f"Outliers Threshold {threshold}")
+    print(f"Outliers Threshold {threshold}  : {len(outliers)}")
+
     df_cleaned = df[df['outlier'] == 0]
     df_cleaned['Prioritas'].value_counts()
     final_pipeline = Pipeline([
