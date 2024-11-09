@@ -21,6 +21,5 @@ shuffled_data_translated.xlsx
 Note.txt
 dev/translate.py
 .venv
-dev
 dev/paraphrase.py
 dataset.xlsx
