@@ -8,6 +8,8 @@ import requests
 import string
 import nltk
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
+from dev.normalization_dict import  normalization_dict
+
 
 ## ChatBot REQ (OPTIONAL)
 import google.generativeai as genai
@@ -24,6 +26,8 @@ nltk.download('punkt')
 
 factory = StemmerFactory()
 stemmer = factory.create_stemmer()
+def normalize_text(tokens):
+    return [normalization_dict.get(word, word) for word in tokens]
 # Function
 def preprocess_text(text):
     # Lowercase folding
@@ -32,8 +36,9 @@ def preprocess_text(text):
     text = text.translate(str.maketrans('', '', string.punctuation))
     # Tokenisasi
     tokens = nltk.word_tokenize(text)
-    # Stopwords removal dan stemming
-    # tokens = [lemmatizer.lemmatize(word) for word in tokens if word not in custom_stopwords]
+    # Normalisasi
+    tokens = normalize_text(tokens)
+    # Stemming
     tokens = [stemmer.stem(word) for word in tokens]
     # Gabungkan kembali token menjadi teks
     return ' '.join(tokens)
@@ -293,8 +298,6 @@ if st.session_state.done_initial:
 link = "https://docs.google.com/forms/d/e/1FAIpQLSdm34qJkPTooN1Df0j45tMRxoIf8MLlUGfnM3bf1_8uI2gGoA/formResponse"
 side_info = '''
 ## Bantu saya untuk mengevaluasi AI
-
-> Informasi yang kamu berikan akan digunakan untuk kepentingan penelitian dan evaluasi AI. Mohon diperhatikan untuk tidak memberikan informasi yang sifatnya sangat sensitif seperti nomor telpon atau kata sandi!
 
 '''
 
