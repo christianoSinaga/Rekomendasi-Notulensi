@@ -23,6 +23,8 @@ from sklearn.pipeline import Pipeline
 from scipy.stats import uniform
 import numpy as np
 from normalization_dict import normalization_dict
+from sklearn.svm import LinearSVC
+
 # %%
 factory = StemmerFactory()
 stemmer = factory.create_stemmer()
@@ -39,7 +41,6 @@ def preprocess_text(text):
     # Normalisasi
     tokens = normalize_text(tokens)
     # Stopwords removal dan stemming
-    # tokens = [lemmatizer.lemmatize(word) for word in tokens if word not in custom_stopwords]
     tokens = [stemmer.stem(word) for word in tokens]
     # Gabungkan kembali token menjadi teks
     return ' '.join(tokens)
@@ -58,6 +59,24 @@ for num in test_split:
         model = final_pipeline.fit(X_train, y_train)
         y_pred = model.predict(X_test)
         print(f"Accuracy Score With Test Size {num}: {accuracy_score(y_test, y_pred)}, \n{classification_report(y_test, y_pred)}")
+
+df_new = pd.read_excel('../dataset.xlsx', sheet_name='uji')
+model = final_pipeline.fit(df['clean_notulensi'], df['Prioritas'])
+df_new['data_baru'] = df_new['data_baru'].apply(preprocess_text)
+y_pred = model.predict(df_new['data_baru'])
+print(f"Accuracy Score With New Data: {accuracy_score(df_new['prioritas'], y_pred)}, \n{classification_report(df_new['prioritas'], y_pred)}")
+# %%
+linear_pipeline = Pipeline([
+    ('tfidf', TfidfVectorizer(max_df=0.75, ngram_range=(1, 1))),
+    ('clf', LinearSVC(C=3.68))
+])
+
+for num in test_split:
+        X_train, X_test, y_train, y_test = train_test_split(df['clean_notulensi'], df['Prioritas'], test_size=num, random_state=42)
+        model = linear_pipeline.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        print(f"Accuracy Score With Test Size {num}: {accuracy_score(y_test, y_pred)}, \n{classification_report(y_test, y_pred)}")
+
 # %%
 ## Mencari SVM Parameter Finder
 # Pipeline untuk SVM
@@ -94,6 +113,7 @@ for num in test_split:
     accuracy = accuracy_score(y_test, y_pred)
     print(f"CLEAN Set Accuracy {num}: {accuracy} ")
 
+
 # %%
 outlier_pipeline = Pipeline([
     ('tfidf', TfidfVectorizer(max_df=0.75, ngram_range=(1, 1))),
@@ -112,7 +132,9 @@ df['probabilities'] = probabilities.max(axis=1)  # Ambil probabilitas tertinggi
 thresholds = [0.85, 0.8, 0.75, 0.7, 0.65]
 # threshold = 0.8 # Best threshold
 # 5 Skenario
-
+# %%
+df = pd.read_excel('paraphrase/no_outlier_v2.0.xlsx')
+# %%
 for threshold in thresholds:
     df['outlier'] = np.where(df['probabilities'] < threshold, 1, 0)  # 1 = outlier, 0 = bukan outlier
     # Menampilkan outlier
@@ -132,14 +154,14 @@ for threshold in thresholds:
         X_train, X_test, y_train, y_test = train_test_split(df_cleaned['clean_notulensi'], df_cleaned['Prioritas'], test_size=num, random_state=42)
         model = final_pipeline.fit(X_train, y_train)
         y_pred = model.predict(X_test)
-        print(f"Accuracy Score With Test Size {num}: {accuracy_score(y_test, y_pred)}, ")
+        print(f"Accuracy Score With Test Size {num}: {accuracy_score(y_test, y_pred)} \n{classification_report(y_test, y_pred)}")
     # Validate Model Accuracy
     model = final_pipeline.fit(df_cleaned['clean_notulensi'], df_cleaned['Prioritas'])
     data_uji = pd.read_excel('../dataset.xlsx', sheet_name='uji')
     data_uji = data_uji[['data_baru', 'prioritas']]
     data_uji['data_baru_bersih'] = data_uji['data_baru'].apply(preprocess_text)
     data_uji['pred'] = model.predict(data_uji['data_baru_bersih'])
-    print("Accuracy:", accuracy_score(data_uji['prioritas'], data_uji['pred']))
+    print("Accuracy Data Baru:", accuracy_score(data_uji['prioritas'], data_uji['pred']), "\n", classification_report(data_uji['prioritas'], data_uji['pred']))
     # Validation Score
     scores = cross_val_score(model, df_cleaned['clean_notulensi'], df_cleaned['Prioritas'], cv=10)  # cv=5 untuk 5-fold cross-validation
     print(f"Cross-validation scores: {scores}")

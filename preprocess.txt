@@ -1,0 +1,15 @@
+def normalize_text(tokens):
+    return [normalization_dict.get(word, word) for word in tokens]
+def preprocess_text(text):
+    # Lowercase folding
+    text = text.lower()
+    # Hilangkan tanda baca
+    text = text.translate(str.maketrans('', '', string.punctuation))
+    # Tokenisasi
+    tokens = nltk.word_tokenize(text)
+    # Normalisasi
+    tokens = normalize_text(tokens)
+    # Stopwords removal dan stemming
+    tokens = [stemmer.stem(word) for word in tokens]
+    # Gabungkan kembali token menjadi teks
+    return ' '.join(tokens)

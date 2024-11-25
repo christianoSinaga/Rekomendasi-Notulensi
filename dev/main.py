@@ -70,15 +70,6 @@ def preprocess_text(text):
 # Implementasi ke dataset
 df_parafrase['clean_notulensi'] = df_parafrase['Notulen'].apply(preprocess_text)
 # %%
-## TF-IDF 
-vectorizer = TfidfVectorizer(ngram_range=(1,2), max_df=0.75, min_df=5)
-vectorizer2 = TfidfVectorizer()
-X2 = vectorizer2.fit_transform(old_df['Notulen'])
-X = vectorizer.fit_transform(df_parafrase['clean_notulensi'])
-y = df_parafrase['Prioritas']
-y2 = old_df['Prioritas']
-
-# %%
 randomSplit = random.randrange(1,50)
 test_split = [0.1, 0.2, 0.3, 0.4, 0.5]
 rand_test = random.choice(test_split)
@@ -89,6 +80,11 @@ final_pipeline = Pipeline([
     ('tfidf', TfidfVectorizer(max_df=0.50, ngram_range=(1, 1))),
     ('clf', SVC(C=3.68, gamma='scale',  kernel='rbf', probability=True))
 ])
+
+# final_pipeline = Pipeline([
+#     ('tfidf', TfidfVectorizer(max_df=0.70, ngram_range=(1, 1))),
+#     ('clf', LinearSVC(C=3.68))
+# ])
 
 # %%
 ## SVM Dengan Data Bersih
@@ -147,19 +143,23 @@ final_pipeline = Pipeline([
     ('clf', SVC(C=3.68, gamma='scale',  kernel='rbf', probability=True))
 
 ])
+linear_pipeline = Pipeline([
+    ('tfidf', TfidfVectorizer(max_df=0.70, ngram_range=(1, 1))),
+    ('clf', LinearSVC(C=3.68))
+])
 
-model = final_pipeline.fit(df_parafrase['clean_notulensi'], df_parafrase['Prioritas'])
+model = linear_pipeline.fit(df_parafrase['clean_notulensi'], df_parafrase['Prioritas'])
 data_uji = pd.read_excel('../dataset.xlsx', sheet_name='uji')
 data_uji = data_uji[['data_baru', 'prioritas']]
 data_uji['data_baru_bersih'] = data_uji['data_baru'].apply(preprocess_text)
 
 # Prediksi probabilitas untuk setiap kelas
-probabilities = model.predict_proba(data_uji['data_baru_bersih'])
+# probabilities = model.predict_proba(data_uji['data_baru_bersih'])
 
 # Tambahkan hasil prediksi dan probabilitas ke DataFrame
 data_uji['pred'] = model.predict(data_uji['data_baru_bersih'])
 # Tampilkan hasil
-print(f"{data_uji[['data_baru', 'prioritas', 'pred']]}\n{probabilities}")
+print(f"{data_uji[['data_baru', 'prioritas', 'pred']]}\n")
 
 print("Accuracy:", accuracy_score(data_uji['prioritas'], data_uji['pred']))
 # %%

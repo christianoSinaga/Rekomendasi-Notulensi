@@ -171,7 +171,7 @@ def output_propmt(output_model):
 
 st.divider()
 # st.write(output_propmt(output_model))
-initial_msg = "Gunakan fitur rekomendasi urutan prioritas di atas terlebih dahulu sebelum melanjutkan ke fitur chatbot. Di bawah ini adalah fitur chatbot. Saat ini, fitur ini masih dalam tahap pengembangan awal dan belum menjadi prioritas utama karena keterbatasan anggaran, sehingga pengembang menggunakan API Key versi gratis. Pengembang juga ingin menginformasikan bahwa situs ini disediakan untuk mendukung penilaian tugas akhir atau skripsi dari pengembang. Mohon maaf atas segala keterbatasan dan kekurangan yang mungkin Anda temui dalam penggunaan fitur chatbot ini. sangat menghargai pengertian Anda."
+initial_msg = "Gunakan fitur rekomendasi urutan prioritas di atas terlebih dahulu sebelum melanjutkan ke fitur chatbot. Di bawah ini adalah fitur chatbot, yang merupakan fitur tambahan. Pengguna diharapkan untuk memberikan penilaian kepada fitur rekomendasi di atas saja."
 
 if (not st.session_state.output_model['Notulensi'].empty):
     initial_prompt = f"""
