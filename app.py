@@ -295,11 +295,24 @@ if st.session_state.done_initial:
 
 
 # SIDEBAR
+# link = "https://docs.google.com/forms/d/e/1FAIpQLSdm34qJkPTooN1Df0j45tMRxoIf8MLlUGfnM3bf1_8uI2gGoA/formResponse"
 link = "https://docs.google.com/forms/d/e/1FAIpQLSdm34qJkPTooN1Df0j45tMRxoIf8MLlUGfnM3bf1_8uI2gGoA/formResponse"
 side_info = '''
 ## Bantu saya untuk mengevaluasi AI
 
 '''
+
+def answer_mapping(answer):
+    if answer == "Sangat Tidak Setuju":
+        return 1
+    elif answer == "Tidak Setuju":
+        return 2
+    elif answer == "Netral":
+        return 3
+    elif answer == "Setuju":
+        return 4
+    elif answer == "Sangat Setuju":
+        return 5
 
 def check_rate_input(question_check):
     if question_check is None:
@@ -314,9 +327,16 @@ def input_gform_btn(name, major, feedbacks):
         value = {
             "entry.1431889514" : name,
             "entry.34748636" : major,
-            "entry.1715492421" : feedbacks[0]+1,
-            "entry.1639603815" : feedbacks[1]+1,
-            "entry.1970527084" : feedbacks[2]+1
+            "entry.1715492421" : answer_mapping(feedbacks[0]),
+            "entry.1639603815" : answer_mapping(feedbacks[1]),
+            "entry.1970527084" : answer_mapping(feedbacks[2]),
+            "entry.1160592644" : answer_mapping(feedbacks[3]),
+            "entry.1819287220" : answer_mapping(feedbacks[4]),
+            "entry.1775793053" : answer_mapping(feedbacks[5]),
+            "entry.1443730601" : answer_mapping(feedbacks[6]),
+            "entry.1516563691" : answer_mapping(feedbacks[7]),
+            "entry.1365320732" : answer_mapping(feedbacks[8]),
+            "entry.727884342" : answer_mapping(feedbacks[9])
         }
         submit(link, value)
 
@@ -324,12 +344,13 @@ def submit(url,data):
     try:
         requests.post(url, data=data)
         st.success("Terima kasih telah memberikan feedback!")
+        # st.success(data)
     except:
         st.error("Gagal mengirim data!")
 ## UNTUK GOOGLE FORM
 
 with st.sidebar.form("gform_input", enter_to_submit=False):
-    sentiment_mapping = ["one", "two", "three", "four", "five"]
+    sentiment_mapping = ["Sangat Tidak Setuju", "Tidak Setuju", "Netral", "Setuju", "Sangat Setuju"]
     st.markdown(side_info)
     # Nama Mahasiswa
     student_name = st.text_input("Nama Kamu")
@@ -338,16 +359,22 @@ with st.sidebar.form("gform_input", enter_to_submit=False):
 
     # Define questions
     questions = [
-        "Bagaimana menurut kamu tentang hasil rekomendasi yang diberikan?",
-        "Bagaimana menurut kamu tentang kejelasan hasil rekomendasi yang diberikan?",
-        "Bagaimana menurut kamu tentang kemudahan penggunaan sistem rekomendasi?"
+        "Saya puas terhadap hasil rekomendasi yang diberikan oleh sistem",
+        "Informasi prioritas yang diberikan oleh sistem jelas",
+        "Sistem ini mudah digunakan untuk mengelola notulensi",
+        "Rekomendasi prioritas yang diberikan oleh sistem relevan dengan notulensi yang saya input",
+        "Saya merasa bahwa rekomendasi yang diberikan oleh sistem sering membantu menyelesaikan masalah dengan lebih cepat",
+        "Saya puas terhadap tampilan antarmuka dari sistem ini",
+        "Saya percaya terhadap hasil rekomendasi prioritas yang diberikan oleh sistem",
+        "Saya merasa bahwa sistem ini dapat digunakan secara mandiri tanpa panduan tambahan",
+        "Saya merasa sistem ini berpotensi untuk membantu mahasiswa lainnya dalam mengelola notulensi bimbingan",
+        "Saya akan merekomendasikan sistem ini kepada mahasiswa lainnya"
     ]
 
     # Create feedback widgets for each question
     feedback_responses = []
     for i, question in enumerate(questions, start=1):
-        st.write(question)
-        feedback = st.feedback('stars', key=f"question_{i}")
+        feedback = st.select_slider(label=question, options=sentiment_mapping, key=f"question_{i}")
         feedback_responses.append(feedback)
 
     # Submit button
