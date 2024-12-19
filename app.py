@@ -55,46 +55,6 @@ Merupakan aplikasi yang dapat membantu anda untuk menentukan urutan penyelesaian
 
 > Setelah anda mencoba menggunakan  sistem rekomendasi ini, silahkan memberikan umpan balik kepada peneliti yang terdapat pada sidebar. Apabila anda menggunakan ponsel, anda bisa memilih tombol yang ada di pojok kiri atas untuk membuka sidebar. Umpan balik sangat diperlukan oleh peneliti untuk kelanjutan penelitiannya.
 '''
-table = '''
-<table style="border:1px solid white; border-radius: 10px;">
-    <thead>
-    <tr>
-    <th style="border:1px solid white; border-radius: 10px;"colspan=2>Prioritas</th>
-    </tr>
-    <tr>
-    <th style="border:1px solid white; border-radius: 10px;">Label</th>
-    <th style="border:1px solid white; border-radius: 10px;">Deskripsi</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr>
-    <td style="border:1px solid white; border-radius: 10px;" rowspan=2> <strong>Paling Didahulukan</strong> </td>
-    <td style="border:1px solid white; border-radius: 10px;"> Tingkat Kesulitan : Tinggi - Sedang </td>
-    </tr>
-    <tr>
-    <td style="border:1px solid white; border-radius: 10px;"> Pengaruh : Memiliki potensi untuk mengubah alur dari penelitian baik secara parsial atau bahkan secara keseluruhan. Perubahan diperlukan pada bagian bagian yang menentukan alur penelitian, seperti : penyesuaian topik/judul, perubahan rumusan masalah, hingga pergantian metode penelitian.
-    </td>
-    </tr>
-    <tr>
-    <td style="border:1px solid white; border-radius: 10px;" rowspan=2> <strong>Didahulukan</strong> </td>
-    <td style="border:1px solid white; border-radius: 10px;">  Tingkat Kesulitan : Sedang </td>
-    </tr>
-    <tr>
-    <td style="border:1px solid white; border-radius: 10px;">Pengaruh : Memiki sangat sedikit potensi untuk mengubah alur dari penelitian, namun dapat mengubah beberapa bagian dari peneltian seperti kesesuaian data, penjabaran penelitian, hingga perubahan penuh pada salah satu bab namun hanya untuk mesinkronkan dengan penelitian
-    </td>
-    </tr>
-    <tr>
-    <td style="border:1px solid white; border-radius: 10px;" rowspan=2> <strong>Tidak Perlu Didahulukan</strong> </td>
-    <td style="border:1px solid white; border-radius: 10px;"> Tingkat Kesulitan : Sedang - Rendah </td>
-    </tr>
-    <tr>
-    <td style="border:1px solid white; border-radius: 10px;">
-    Pengaruh : Tidak memiliki pengaruh pada alur penelitian, hanya perubahan kecil seperti kejelasan penulisan, kesesuaian dengan pedoman, hingga penambahan sedikit elemen namun hanya untuk memperjelas penelitian.
-    </td>
-    </tr>
-</table>
-
-'''
 # st.html(table)
 st.markdown(desc, unsafe_allow_html=True)
 
@@ -138,12 +98,33 @@ if "done_initial" not in st.session_state:
 
 if col_1.button("Tentukan Prioritas", use_container_width=True):
     if notulensi_group:
+        
         # Preprocess text
         clean_notulensi_group = [preprocess_text(text) for text in notulensi_group]
         prediction = model.predict(clean_notulensi_group)
-        # Output notulensi dan prediksinnya masing masing dalam bentuk tabel
-        st.session_state.output_model = pd.DataFrame({'Notulensi': notulensi_group, 'Prediksi': (translate_label(prediction) for prediction in prediction)})
-        st.session_state.done_initial = False
+
+        # Buat DataFrame untuk output
+        df_output = pd.DataFrame({
+            'Notulensi': notulensi_group,
+            'Prediksi': [translate_label(pred) for pred in prediction]
+        })
+        
+
+        # Pastikan DataFrame tidak kosong
+        if not df_output.empty:
+            # Kelompokkan berdasarkan label
+            grouped_output = df_output.groupby('Prediksi', sort=True)
+
+            # Simpan ke session state
+            st.session_state.output_model = df_output
+            st.session_state.done_initial = False
+
+            # Tampilkan tabel terkelompok
+            for label, group in grouped_output:
+                st.write(f"### Prioritas: {label}")
+                st.table(group)
+        else:
+            st.warning("Tidak ada data untuk ditampilkan.")
 
 if not st.session_state.output_model['Notulensi'].empty:
     st.dataframe(st.session_state.output_model, use_container_width=True, hide_index=True)
@@ -156,135 +137,135 @@ if col_2.button("Reset", use_container_width=True):
 
 
 
-## CHATBOT
-# Fungsi stream untuk variabel berisi tipe data String
-def stream_error_msg(response):
-    for word in response.split(" "):
-        yield word + " "
-        time.sleep(0.02)
+# ## CHATBOT
+# # Fungsi stream untuk variabel berisi tipe data String
+# def stream_error_msg(response):
+#     for word in response.split(" "):
+#         yield word + " "
+#         time.sleep(0.02)
 
-def output_propmt(output_model):
-    final_output = ""
-    for i, row in output_model.iterrows():
-        final_output += f"- **Notulensi ke {i+1}**: '{row['Notulensi']}' | **Prioritas**: {row['Prediksi']}\n"
-    return final_output
+# def output_propmt(output_model):
+#     final_output = ""
+#     for i, row in output_model.iterrows():
+#         final_output += f"- **Notulensi ke {i+1}**: '{row['Notulensi']}' | **Prioritas**: {row['Prediksi']}\n"
+#     return final_output
 
-st.divider()
-# st.write(output_propmt(output_model))
-initial_msg = "Gunakan fitur rekomendasi urutan prioritas di atas terlebih dahulu sebelum melanjutkan ke fitur chatbot. Di bawah ini adalah fitur chatbot, yang merupakan fitur tambahan. Pengguna diharapkan untuk memberikan penilaian kepada fitur rekomendasi di atas saja."
+# st.divider()
+# # st.write(output_propmt(output_model))
+# initial_msg = "Gunakan fitur rekomendasi urutan prioritas di atas terlebih dahulu sebelum melanjutkan ke fitur chatbot. Di bawah ini adalah fitur chatbot, yang merupakan fitur tambahan. Pengguna diharapkan untuk memberikan penilaian kepada fitur rekomendasi di atas saja."
 
-if (not st.session_state.output_model['Notulensi'].empty):
-    initial_prompt = f"""
-    Kamu adalah seorang asisten dari mahasiswa yang aku tugaskan untuk membantu mahasiswa tingkat akhir dalam menentukan urutan pengerjaan dari notulensi bimbingannya. Sebelumnya kamu sudah memberikan label tingkat prioritas dari masing masing notulensi sebagai berikut : 
+# if (not st.session_state.output_model['Notulensi'].empty):
+#     initial_prompt = f"""
+#     Kamu adalah seorang asisten dari mahasiswa yang aku tugaskan untuk membantu mahasiswa tingkat akhir dalam menentukan urutan pengerjaan dari notulensi bimbingannya. Sebelumnya kamu sudah memberikan label tingkat prioritas dari masing masing notulensi sebagai berikut : 
     
-    {output_propmt(st.session_state.output_model)}
+#     {output_propmt(st.session_state.output_model)}
 
-    Kamu memberikan label tingkat prioritas dengan menggunakan parameter berikut:
-    | **Label**               | **Tingkat Kesulitan**           | **Pengaruh** |
-    |-------------------------|----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-    | **Paling Didahulukan**  | Tinggi - Sedang                 | Memiliki potensi mengubah alur penelitian baik sebagian atau seluruhnya. Dapat memerlukan perubahan besar seperti penyesuaian topik/judul, perubahan rumusan masalah, atau pergantian metode penelitian. |
-    | **Didahulukan**         | Sedang                          | Berpotensi mengubah bagian tertentu, meskipun tidak terlalu memengaruhi keseluruhan alur penelitian. Bisa melibatkan kesesuaian data, penjabaran penelitian, atau perubahan pada satu bab agar sesuai dengan penelitian.  |
-    | **Tidak Perlu Didahulukan** | Sedang - Rendah            | Tidak memengaruhi alur penelitian; hanya perubahan kecil seperti kejelasan penulisan, kesesuaian pedoman, atau penambahan elemen kecil untuk memperjelas penelitian. |
+#     Kamu memberikan label tingkat prioritas dengan menggunakan parameter berikut:
+#     | **Label**               | **Tingkat Kesulitan**           | **Pengaruh** |
+#     |-------------------------|----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+#     | **Paling Didahulukan**  | Tinggi - Sedang                 | Memiliki potensi mengubah alur penelitian baik sebagian atau seluruhnya. Dapat memerlukan perubahan besar seperti penyesuaian topik/judul, perubahan rumusan masalah, atau pergantian metode penelitian. |
+#     | **Didahulukan**         | Sedang                          | Berpotensi mengubah bagian tertentu, meskipun tidak terlalu memengaruhi keseluruhan alur penelitian. Bisa melibatkan kesesuaian data, penjabaran penelitian, atau perubahan pada satu bab agar sesuai dengan penelitian.  |
+#     | **Tidak Perlu Didahulukan** | Sedang - Rendah            | Tidak memengaruhi alur penelitian; hanya perubahan kecil seperti kejelasan penulisan, kesesuaian pedoman, atau penambahan elemen kecil untuk memperjelas penelitian. |
     
-    Selanjutnya kamu akan berkomunikasi dengan mahasiwa yang memberikan notulensi yang sudah kamu berikan label tingkat prioritas di atas. Berikan alasan dan penjelasan kamu lebih lanjut kepada mahasiswa pengguna atas penentuan prioritas yang sudah kamu berikan. Gunakan bahasa yang santai dan mudah dipahami oleh mahasiswa. Kamu juga dapat memberikan saran dan rekomendasi kepada mahasiswa pengguna untuk mempercepat penyelesaian tugas akhirnya. 
-    """
-    # initial_prompt = f" {output_propmt(st.session_state.output_model)}"
+#     Selanjutnya kamu akan berkomunikasi dengan mahasiwa yang memberikan notulensi yang sudah kamu berikan label tingkat prioritas di atas. Berikan alasan dan penjelasan kamu lebih lanjut kepada mahasiswa pengguna atas penentuan prioritas yang sudah kamu berikan. Gunakan bahasa yang santai dan mudah dipahami oleh mahasiswa. Kamu juga dapat memberikan saran dan rekomendasi kepada mahasiswa pengguna untuk mempercepat penyelesaian tugas akhirnya. 
+#     """
+#     # initial_prompt = f" {output_propmt(st.session_state.output_model)}"
+
+
+# ## UNCOMMENT TO ACTIVATE CHATBOT
+# stream_initial_msg = st.write(initial_msg)
+
+
+# ## CHATBOT (OPTIONAL)
+# def to_markdown(text):
+#   text = text.replace('•', '  *')
+#   return Markdown(textwrap.indent(text, '> ', predicate=lambda _: True))
+
+
+# # Set API Key and Model
+# genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+# if "genai_model" not in st.session_state:
+#     st.session_state["genai_model"] = genai.GenerativeModel('gemini-1.5-flash')
+# model = st.session_state["genai_model"]
 
 
 
-stream_initial_msg = st.write(initial_msg)
+
+# # Tampilkan pesan sebelumnya
+# for chat in st.session_state.chats:
+#     # mengabaikan initial prompt
+#     with st.chat_message(chat["role"]):
+#         st.markdown(chat["text"])
+
+# # Fungsi untuk mengonversi sesi obrolan ke format chat.history
+# # Parameter initial_prompt nullable
+# def convert_to_chat_history_format(chats, initial_prompt=None):
+#     history = []
+#     if initial_prompt:
+#         history.append({"parts": [{"text": initial_prompt}], "role": "user"})
+#     for chat in chats:
+#         history.append({
+#             "parts": [{"text": chat["text"]}],
+#             "role": chat["role"]
+#         })
+#     return history
 
 
-## CHATBOT (OPTIONAL)
-def to_markdown(text):
-  text = text.replace('•', '  *')
-  return Markdown(textwrap.indent(text, '> ', predicate=lambda _: True))
+# # Fungsi streaming yang dimodifikasi untuk digunakan dengan `st.write_stream`
+# def stream_gem_ai(response):
+#     for chunk in response:
+#         yield chunk.text  # Menggunakan `yield` untuk membuatnya menjadi generator
 
+# if not st.session_state.output_model['Notulensi'].empty or st.session_state.done_initial:
+#     chat_history = convert_to_chat_history_format(st.session_state.chats, initial_prompt)
+#     chat_ai = model.start_chat(history=chat_history) 
+#     # st.session_state.done_initial = True
+# if not st.session_state.output_model['Notulensi'].empty and not st.session_state.done_initial:
+#     with st.chat_message("model"):
+#         try:
+#             response_ai = chat_ai.send_message(initial_prompt, stream=True)  # Pastikan `send_message` mendukung streaming
+#             response = st.write_stream(stream_gem_ai(response_ai))
+#             st.session_state.chats.append({
+#                 "role": "model",
+#                 "text": response
+#             })
+#             st.session_state.done_initial = True
+#         except Exception as e:
+#             error_msg =  f"Terjadi kesalahan: {str(e)}"
+#             response = st.write_stream(stream_error_msg(error_msg))
+#             st.session_state.chats.append({
+#                 "role": "model",
+#                 "text": response
+#             })
 
-# Set API Key and Model
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-if "genai_model" not in st.session_state:
-    st.session_state["genai_model"] = genai.GenerativeModel('gemini-1.5-flash')
-model = st.session_state["genai_model"]
+# if st.session_state.done_initial:
+#     # Menerima input pengguna
+#     if prompt := st.chat_input("Chat with Gemini AI"):
+#         st.session_state.chats.append({
+#             "role": "user",
+#             "text": prompt
+#         })
+#         with st.chat_message("user"):
+#             st.markdown(prompt)
 
+#         # Siapkan histori dalam format yang diinginkan
 
-
-
-# Tampilkan pesan sebelumnya
-for chat in st.session_state.chats:
-    # mengabaikan initial prompt
-    with st.chat_message(chat["role"]):
-        st.markdown(chat["text"])
-
-# Fungsi untuk mengonversi sesi obrolan ke format chat.history
-# Parameter initial_prompt nullable
-def convert_to_chat_history_format(chats, initial_prompt=None):
-    history = []
-    if initial_prompt:
-        history.append({"parts": [{"text": initial_prompt}], "role": "user"})
-    for chat in chats:
-        history.append({
-            "parts": [{"text": chat["text"]}],
-            "role": chat["role"]
-        })
-    return history
-
-
-# Fungsi streaming yang dimodifikasi untuk digunakan dengan `st.write_stream`
-def stream_gem_ai(response):
-    for chunk in response:
-        yield chunk.text  # Menggunakan `yield` untuk membuatnya menjadi generator
-
-if not st.session_state.output_model['Notulensi'].empty or st.session_state.done_initial:
-    chat_history = convert_to_chat_history_format(st.session_state.chats, initial_prompt)
-    chat_ai = model.start_chat(history=chat_history) 
-    # st.session_state.done_initial = True
-if not st.session_state.output_model['Notulensi'].empty and not st.session_state.done_initial:
-    with st.chat_message("model"):
-        try:
-            response_ai = chat_ai.send_message(initial_prompt, stream=True)  # Pastikan `send_message` mendukung streaming
-            response = st.write_stream(stream_gem_ai(response_ai))
-            st.session_state.chats.append({
-                "role": "model",
-                "text": response
-            })
-            st.session_state.done_initial = True
-        except Exception as e:
-            error_msg =  f"Terjadi kesalahan: {str(e)}"
-            response = st.write_stream(stream_error_msg(error_msg))
-            st.session_state.chats.append({
-                "role": "model",
-                "text": response
-            })
-
-if st.session_state.done_initial:
-    # Menerima input pengguna
-    if prompt := st.chat_input("Chat with Gemini AI"):
-        st.session_state.chats.append({
-            "role": "user",
-            "text": prompt
-        })
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        # Siapkan histori dalam format yang diinginkan
-
-        with st.chat_message("model"):
-            try: 
-                response_ai = chat_ai.send_message(prompt, stream=True)  # Pastikan `send_message` mendukung streaming
-                # Menggunakan generator dengan `st.write_stream`
-                response = st.write_stream(stream_gem_ai(response_ai))
-                st.session_state.chats.append({
-                    "role": "model",
-                    "text": response
-                })
-            except Exception as e:
-                error_msg =  f"Terjadi kesalahan: {str(e)}"
-                response = st.write_stream(stream_error_msg(error_msg))
-                st.session_state.chats.append({
-                    "role": "model",
-                    "text": response
-                })
+#         with st.chat_message("model"):
+#             try: 
+#                 response_ai = chat_ai.send_message(prompt, stream=True)  # Pastikan `send_message` mendukung streaming
+#                 # Menggunakan generator dengan `st.write_stream`
+#                 response = st.write_stream(stream_gem_ai(response_ai))
+#                 st.session_state.chats.append({
+#                     "role": "model",
+#                     "text": response
+#                 })
+#             except Exception as e:
+#                 error_msg =  f"Terjadi kesalahan: {str(e)}"
+#                 response = st.write_stream(stream_error_msg(error_msg))
+#                 st.session_state.chats.append({
+#                     "role": "model",
+#                     "text": response
+#                 })
             
 
 
