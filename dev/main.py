@@ -9,7 +9,7 @@ from sklearn.utils import resample
 old_dataset = '../dataset.xlsx'
 old_df = pd.read_excel(old_dataset)
 
-parafrase = 'paraphrase/no_outlier_v1.0.xlsx'
+parafrase = 'paraphrase/no_outlier_v2.0.xlsx'
 df_parafrase = pd.read_excel(parafrase)
 
 print(f"Dataset parafrase \n{df_parafrase.head()} \n\n{Counter(df_parafrase['Prioritas'])}")
@@ -81,15 +81,13 @@ final_pipeline = Pipeline([
     ('clf', SVC(C=3.68, gamma='scale',  kernel='rbf', probability=True))
 ])
 
-# final_pipeline = Pipeline([
-#     ('tfidf', TfidfVectorizer(max_df=0.70, ngram_range=(1, 1))),
-#     ('clf', LinearSVC(C=3.68))
-# ])
 
 # %%
 ## SVM Dengan Data Bersih
+x = df_parafrase['clean_notulensi']
+y = df_parafrase['Prioritas']
 for num in test_split:
-    X_train, X_test, y_train, y_test = train_test_split(df_parafrase['clean_notulensi'], df_parafrase['Prioritas'], test_size=num, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=num, random_state=42)
     model = final_pipeline.fit(X_train, y_train)
     y_pred = model.predict(X_test)
     print(f"Model Accuracy {num}: {accuracy_score(y_test, y_pred)}")
