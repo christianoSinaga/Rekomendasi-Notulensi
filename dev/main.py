@@ -4,6 +4,8 @@ import pandas as pd
 import random
 from collections import Counter
 from sklearn.utils import resample
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
 
 # Baca File Excel
 old_dataset = '../dataset.xlsx'
@@ -84,6 +86,7 @@ final_pipeline = Pipeline([
 
 # %%
 ## SVM Dengan Data Bersih
+## Split Test
 x = df_parafrase['clean_notulensi']
 y = df_parafrase['Prioritas']
 for num in test_split:
@@ -92,6 +95,14 @@ for num in test_split:
     y_pred = model.predict(X_test)
     print(f"Model Accuracy {num}: {accuracy_score(y_test, y_pred)}")
 
+# %%
+# SVM Dengan Data Bersih
+## CV Test
+model = final_pipeline.fit(x, y)
+scores = cross_val_score(model, x, y, cv=10)  # cv=5 untuk 5-fold cross-validation
+print(f"Cross-validation scores: {scores}")
+print(f"Mean accuracy: {scores.mean()}")
+print(f"===========================================\n")
 # %%
 ## Ekstrak Fitur
 ## Ubah pipeline dengan LinearSVC untuk mendapatkan bobot fitur

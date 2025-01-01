@@ -47,6 +47,7 @@ def preprocess_text(text):
 # %%
 # df['clean_notulensi'] = df['Notulen'].apply(preprocess_text)
 test_split = [0.1, 0.2, 0.3, 0.4, 0.5]
+df['clean_notulensi'] = df['Notulen'].apply(preprocess_text)
 # %%
 final_pipeline = Pipeline([
         ('tfidf', TfidfVectorizer(max_df=0.75, ngram_range=(1, 1))),
@@ -96,7 +97,7 @@ param_dist = {
 
 
 # Inisialisasi RandomizedSearchCV
-random_search = RandomizedSearchCV(pipeline, param_dist, n_iter=50, cv=5, n_jobs=-1, verbose=2, random_state=42)
+random_search = RandomizedSearchCV(pipeline, param_dist, n_iter=50, n_jobs=-1, verbose=2, random_state=42)
 
 for num in test_split:
     X_train, X_test, y_train, y_test = train_test_split(df['clean_notulensi'], df['Prioritas'], test_size=num, random_state=42)
@@ -129,12 +130,7 @@ probabilities = model.named_steps['clf'].predict_proba(X_tfidf)
 df['probabilities'] = probabilities.max(axis=1)  # Ambil probabilitas tertinggi
 
 # %%
-# Tentukan threshold untuk outlier (misalkan kita anggap 0.8 sebagai threshold)
 thresholds = [0.85, 0.8, 0.75, 0.7, 0.65]
-# threshold = 0.8 # Best threshold
-# 5 Skenario
-# %%
-df = pd.read_excel('paraphrase/no_outlier_v2.0.xlsx')
 # %%
 for threshold in thresholds:
     df['outlier'] = np.where(df['probabilities'] < threshold, 1, 0)  # 1 = outlier, 0 = bukan outlier
@@ -187,6 +183,9 @@ param_dist = {
 
 # Inisialisasi RandomizedSearchCV
 random_search = RandomizedSearchCV(pipeline, param_dist, n_iter=50, cv=5, n_jobs=-1, verbose=2, random_state=42)
+
+
+
 df['outlier'] = np.where(df['probabilities'] < 0.85, 1, 0)  # 1 = outlier, 0 = bukan outlier
 # Menampilkan outlier
 outliers = df[df['outlier'] == 1]
